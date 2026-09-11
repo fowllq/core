@@ -1,3 +1,7 @@
+-- ============================================================================
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v14.0 BY @FOWLLQ (FLING SPEED SYNC)
+-- ============================================================================
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -37,7 +41,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "script started!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v14.0 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -48,8 +52,8 @@ end
 
 local function applyHighlight(player, char)
     if player == LocalPlayer then return end
-    local highlight = char:FindFirstChild("Highlight") or Instance.new("Highlight")
-    highlight.Name = "Highlight"
+    local highlight = char:FindFirstChild("HvH_Core_Highlight") or Instance.new("Highlight")
+    highlight.Name = "HvH_Core_Highlight"
     highlight.FillColor = Color3.fromRGB(255, 0, 80)
     highlight.FillTransparency = 0.5
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -158,6 +162,7 @@ function Core:ToggleEmoteFling()
                 RunService.RenderStepped:Wait()
                 if not self.Config.EmoteFling or not self.Active then break end
 
+                -- СИНХРОНИЗАЦИЯ СКОРОСТИ: Берём значение из инпута SpeedValue вместо залоченной 16!
                 if dir.Magnitude > 0 then
                     local spd = self.Config.SpeedValue
                     r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
@@ -218,47 +223,3 @@ function Core:StartMainLoop()
         end
 
         if Core.Config.Noclip or Core.Config.EmoteFling then
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = false end end
-        end
-    end)
-    table.insert(Core.Connections, loopConn)
-end
-
-function Core:InitJump()
-    local jumpConn
-    jumpConn = UserInputService.JumpRequest:Connect(function()
-        if not Core.Active then jumpConn:Disconnect() return end
-        if Core.Config.InfJump then
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-        end
-    end)
-    table.insert(Core.Connections, jumpConn)
-end
-
-function Core:Unload()
-    Core.Active = false
-    EmoteFlingCleanup()
-    for _, conn in ipairs(Core.Connections) do if conn then conn:Disconnect() end end
-    Core.Connections = {}
-    if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() end
-    if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() end
-    pcall(function()
-        local char = LocalPlayer.Character
-        if char then
-            local root = char:FindFirstChild("HumanoidRootPart")
-            if root then 
-                root.AssemblyLinearVelocity = Vector3.zero
-                root.AssemblyAngularVelocity = Vector3.zero
-                root.Velocity = Vector3.zero
-                root.RotVelocity = Vector3.zero
-            end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = 16 end
-            for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = true end end
-        end
-    end)
-end
-
-return Core
