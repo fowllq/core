@@ -1,5 +1,5 @@
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v8.0 BY @FOWLLQ (ISOLATED ANTI-FALL) - PART 1
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v9.0 BY @FOWLLQ (FLY-SPEED SYNC) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "8.0.0",
+    Version = "9.0.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -22,16 +22,14 @@ local Core = {
         InfJump = false,
         Noclip = false,
         Fly = false,
-        FlySpeed = 50,
         EmoteFling = false,
-        antiFallEnabled = true -- Тумблер независимого анти-фалла
+        antiFallEnabled = true -- По умолчанию включен для твоей безопасности
     },
     Connections = {},
     Physics = { bVelocity = nil, bGyro = nil },
     EmoteData = {
         Track = nil,
-        AnimId = "rbxassetid://133566007754001",
-        Flip = 1
+        AnimId = "133566007754001"
     }
 }
 
@@ -46,7 +44,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v8.0 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v9.0 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -88,26 +86,24 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v8.0 BY @FOWLLQ (ISOLATED ANTI-FALL) - PART 2
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v9.0 BY @FOWLLQ (FLY-SPEED SYNC) - PART 2
 -- ============================================================================
 
--- АНТИ-ФАЛЛ ВЫНЕСЕН В ИЗОЛИРОВАННУЮ ОТДЕЛЬНУЮ ФУНКЦИЮ ИЗ ИСХОДНИКА ОДИН В ОДИН
 function Core:HookAntiFall(char)
     task.spawn(function()
         local r = char:WaitForChild("HumanoidRootPart", 10)
-        if r and self.Config.antiFallEnabled then
+        if r then
             local conn
             conn = RunService.Heartbeat:Connect(function()
                 if not self.Active or not self.Config.antiFallEnabled or not r.Parent then 
                     if conn then conn:Disconnect() end 
                     return 
                 end
-                -- Логика подавления урона от вертикального падения оси Y из файла 5
                 local v = r.AssemblyLinearVelocity
-                r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
-                RunService.RenderStepped:Wait()
-                if r and r.Parent then
-                    r.AssemblyLinearVelocity = v
+                if v.Y < -20 then
+                    r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
+                    RunService.RenderStepped:Wait()
+                    if r and r.Parent then r.AssemblyLinearVelocity = v end
                 end
             end)
             table.insert(self.Connections, conn)
@@ -126,10 +122,7 @@ end
 
 local function EmoteFlingCleanup()
     Core.Config.EmoteFling = false
-    if Core.EmoteData.Track then
-        pcall(function() Core.EmoteData.Track:Stop() end)
-        Core.EmoteData.Track = nil
-    end
+    if Core.EmoteData.Track then pcall(function() Core.EmoteData.Track:Stop() end) Core.EmoteData.Track = nil end
     local char = LocalPlayer.Character
     if char then
         local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -163,10 +156,8 @@ function Core:ToggleEmoteFling()
         local flip = 1
         local timeout = tick() + 300 
 
-        -- АБСОЛЮТНО ОРИГИНАЛЬНЫЙ ЦИКЛ WHILE ФЛИНГА ИЗ ТВОЕГО ИСХОДНИКА
         while self.Config.EmoteFling and self.Active do
             if tick() > timeout then break end
-            
             RunService.Heartbeat:Wait()
 
             local c = LocalPlayer.Character
@@ -184,7 +175,7 @@ function Core:ToggleEmoteFling()
                 if not self.Config.EmoteFling or not self.Active then break end
 
                 if dir.Magnitude > 0 then
-                    local spd = 16 -- Скорость перемещения в режиме тарана из исходника
+                    local spd = 16 
                     r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
                     r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
                 else
@@ -197,7 +188,6 @@ function Core:ToggleEmoteFling()
                 break
             end
         end
-
         EmoteFlingCleanup()
     end)
 end
@@ -205,7 +195,7 @@ end
 function Core:StartMainLoop()
     SecureEnvironment()
     self:SendLog()
-    self:InitAntiFallService() -- Запуск изолированной службы анти-падения
+    self:InitAntiFallService()
 
     local loopConn
     loopConn = RunService.Stepped:Connect(function()
@@ -218,13 +208,15 @@ function Core:StartMainLoop()
         local root = char:FindFirstChild("HumanoidRootPart")
         if not hum or not root then return end
 
+        -- SpeedHack для ходьбы
         if Core.Config.Speed and not Core.Config.Fly and not Core.Config.EmoteFling then 
             hum.WalkSpeed = Core.Config.SpeedValue 
         else
             if not Core.Config.EmoteFling and hum.WalkSpeed == Core.Config.SpeedValue then hum.WalkSpeed = 16 end
         end
 
-        if Core.Config.Fly then
+        -- Улучшенный полет: Скорость ПОЛЕТА теперь синхронизирована со слайдером SpeedValue!
+        if Core.Config.Fly and not Core.Config.EmoteFling then
             if not Core.Physics.bVelocity or Core.Physics.bVelocity.Parent ~= root then
                 Core.Physics.bVelocity = Instance.new("BodyVelocity")
                 Core.Physics.bVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
@@ -246,7 +238,8 @@ function Core:StartMainLoop()
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVec = moveVec - Vector3.new(0, 1, 0) end
             
             if moveVec.Magnitude > 0 then
-                Core.Physics.bVelocity.Velocity = moveVec.Unit * Core.Config.FlySpeed
+                -- Берёт скорость напрямую из настроек Спидхака!
+                bVelocity.Velocity = moveVec.Unit * Core.Config.SpeedValue
             else
                 Core.Physics.bVelocity.Velocity = Vector3.new(0, 0, 0)
             end
