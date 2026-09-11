@@ -1,5 +1,5 @@
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v3.2 BY @FOWLLQ (ANTI-DAMAGE FLING) - PART 1
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v3.3 BY @FOWLLQ (DAMAGE BYPASS) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "3.2.0",
+    Version = "3.3.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -48,7 +48,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v3.2 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v3.3 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -90,7 +90,7 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v3.2 BY @FOWLLQ (ANTI-DAMAGE FLING) - PART 2
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v3.3 BY @FOWLLQ (DAMAGE BYPASS) - PART 2
 -- ============================================================================
 
 function Core:ManageEmoteFlingTrack(hum, root)
@@ -140,31 +140,39 @@ function Core:ManageEmoteFlingTrack(hum, root)
                         end
                     end
                     
-                    -- ФИКС СМЕРТИ: Плавный сброс сил без резких скачков скорости для обхода античита NDS
+                    -- УЛЬТИМАТИВНЫЙ ОБХОД УРОНА ОТ СКРИПТОВ КАРТЫ NDS
                     if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
-                    if r then
-                        -- Вместо резкого Vector3.zero гасим скорость плавно в цикле
-                        for i = 1, 5 do
-                            r.AssemblyLinearVelocity = r.AssemblyLinearVelocity * 0.2
-                            r.AssemblyAngularVelocity = r.AssemblyAngularVelocity * 0.2
+                    if r and h then
+                        -- Включаем локальный щит CFrame-заморозки, ломая стейт урона игры
+                        local safePos = r.CFrame
+                        h:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                        
+                        for i = 1, 15 do
+                            r.AssemblyLinearVelocity = Vector3.zero
+                            r.AssemblyAngularVelocity = Vector3.zero
+                            r.CFrame = safePos -- Жестко лочим позицию, гася отдачу
                             RunService.Heartbeat:Wait()
                         end
-                        r.AssemblyLinearVelocity = Vector3.zero
-                        r.AssemblyAngularVelocity = Vector3.zero
+                        
+                        h:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+                        h:ChangeState(Enum.HumanoidStateType.Running)
                     end
                 end)
             end
         end
     else
         if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
-        if root then
-            for i = 1, 5 do
-                root.AssemblyLinearVelocity = root.AssemblyLinearVelocity * 0.2
-                root.AssemblyAngularVelocity = root.AssemblyAngularVelocity * 0.2
+        if root and hum then
+            local safePos = root.CFrame
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            for i = 1, 15 do
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+                root.CFrame = safePos
                 RunService.Heartbeat:Wait()
             end
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+            hum:ChangeState(Enum.HumanoidStateType.Running)
         end
     end
 end
@@ -282,17 +290,23 @@ function Core:Unload()
         local char = LocalPlayer.Character
         if char then
             local root = char:FindFirstChild("HumanoidRootPart")
-            if root then root.AssemblyAngularVelocity = Vector3.zero root.AssemblyLinearVelocity = Vector3.zero end
+            if root then 
+                root.AssemblyAngularVelocity = Vector3.zero 
+                root.AssemblyLinearVelocity = Vector3.zero 
+            end
             local hum = char:FindFirstChildOfClass("Humanoid")
-if hum then hum.WalkSpeed = 16 
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-                end
-                    for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then
+            if hum then 
+                hum.WalkSpeed = 16 
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true) 
+                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true) 
+            end
+            for _, part in ipairs(char:GetDescendants()) do 
+                if part:IsA("BasePart") then 
                     part.CanCollide = true 
-                 end
-             end
+                end 
+            end
         end
     end)
 end
+
 return Core
