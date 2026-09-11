@@ -1,5 +1,5 @@
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v11.2 BY @FOWLLQ (ANTI-FALL SUPPRESS) - PART 1
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v12.0 BY @FOWLLQ (DIRECT INTEGRATION) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "11.2.0",
+    Version = "12.0.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -23,15 +23,14 @@ local Core = {
         Noclip = false,
         Fly = false,
         FlySpeed = 50,
-        EmoteFling = false,
+        EmoteFling = false, -- Наш флаг-индикатор для кнопки меню
         antiFallEnabled = true
     },
     Connections = {},
     Physics = { bVelocity = nil, bGyro = nil },
     EmoteData = {
         Track = nil,
-        AnimId = "rbxassetid://133566007754001",
-        Flip = 1
+        AnimId = "133566007754001"
     }
 }
 
@@ -46,7 +45,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v11.2 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v12.0 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -88,34 +87,24 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v11.2 BY @FOWLLQ (ANTI-FALL SUPPRESS) - PART 2
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v12.0 BY @FOWLLQ (DIRECT INTEGRATION) - PART 2
 -- ============================================================================
 
--- ПОЛНОСТЬЮ ПЕРЕПИСАННЫЙ, НЕУБИВАЕМЫЙ АНТИ-ФАЛЛ СРЕЗ СКОРОСТИ
+-- АВТОНОМНЫЙ ХУК ИЗ ИСХОДНИКА (ФАЙЛ 5) ОДИН В ОДИН
 function Core:HookAntiFall(char)
     task.spawn(function()
         local r = char:WaitForChild("HumanoidRootPart", 10)
-        local h = char:WaitForChild("Humanoid", 10)
-        if r and h then
+        if r then
             local conn
             conn = RunService.Heartbeat:Connect(function()
                 if not self.Active or not self.Config.antiFallEnabled or not r.Parent then 
                     if conn then conn:Disconnect() end 
                     return 
                 end
-                
                 local v = r.AssemblyLinearVelocity
-                -- Если персонаж летит вниз быстрее, чем обычный шаг (ось Y уходит в минус)
-                if v.Y < -5 then
-                    -- Жестко срезаем вертикальное падение в 0, оставляя только боковой разгон (X, Z)
-                    r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
-                    r.Velocity = Vector3.new(v.X, 0, v.Z)
-                    
-                    -- Сбрасываем стейт падения гуманоида, чтобы сервер не успел выдать дамаг
-                    if h:GetState() == Enum.HumanoidStateType.Freefall or h:GetState() == Enum.HumanoidStateType.FallingDown then
-                        h:ChangeState(Enum.HumanoidStateType.Running)
-                    end
-                end
+                r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
+                RunService.RenderStepped:Wait()
+                if r and r.Parent then r.AssemblyLinearVelocity = v end
             end)
             table.insert(self.Connections, conn)
         end
@@ -131,57 +120,56 @@ function Core:InitAntiFallService()
     table.insert(self.Connections, respawnConn)
 end
 
+-- АБСОЛЮТНО ОРИГИНАЛЬНАЯ ЗАЧИСТКА ИЗ ИСХОДНИКА (EmoteFlingCleanup)
 local function EmoteFlingCleanup()
     Core.Config.EmoteFling = false
     if Core.EmoteData.Track then pcall(function() Core.EmoteData.Track:Stop() end) Core.EmoteData.Track = nil end
     local char = LocalPlayer.Character
     if char then
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChildWhichIsA("Humanoid")
         if hrp then
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
             hrp.Velocity = Vector3.zero
             hrp.RotVelocity = Vector3.zero
         end
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Running) end
     end
 end
 
+-- ВЫЗОВ ОРИГИНАЛЬНОГО БЛОКА С ПЕРЕМЕННЫМИ ИЗ ТВОЕГО ФАЙЛА (FireEmoteFling)
 function Core:ToggleEmoteFling()
     if not self.Active then return end
-
-    if self.Config.EmoteFling then
-        self.Config.EmoteFling = false
-        EmoteFlingCleanup()
-        return
-    end
+    if self.Config.EmoteFling then self.Config.FlingActive = false EmoteFlingCleanup() return end
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-
     if not (hrp and hum) then return end
 
     local anim = Instance.new("Animation")
-    anim.AnimationId = self.EmoteData.AnimId
+    anim.AnimationId = "rbxassetid://" .. self.EmoteData.AnimId
     local trackOk, track = pcall(function() return hum:LoadAnimation(anim) end)
     if not trackOk or not track then return end
 
     self.Config.EmoteFling = true
     self.EmoteData.Track = track
-    track.Priority = Enum.AnimationPriority.Action
-    track.Looped = false
-    track:Play()
 
     task.spawn(function()
         local animStopped = false
-        track.Stopped:Once(function() animStopped = true end)
-        
+        local trackStoppedConn
+        trackStoppedConn = track.Stopped:Once(function() animStopped = true if trackStoppedConn then pcall(function() trackStoppedConn:Disconnect() end) end end)
+
+        track.Priority = Enum.AnimationPriority.Action
+        track.Looped = false
+        track:Play()
+
+        local flip = 1
         local timeout = tick() + 300 
 
+        -- ЧИСТЫЙ КОД ЦИКЛА ИЗ ТВОЕГО ФАЙЛА ПОСТРОЧНО
         while self.Config.EmoteFling and self.Active and not animStopped do
             if tick() > timeout then break end
+            
             RunService.Heartbeat:Wait()
 
             local c = LocalPlayer.Character
@@ -190,19 +178,16 @@ function Core:ToggleEmoteFling()
 
             if r and h then
                 local dir = h.MoveDirection
-                self.EmoteData.Flip = self.EmoteData.Flip * -1
-                
-                h.Health = 100
-                
-                r.AssemblyLinearVelocity = Vector3.new(100000 * self.EmoteData.Flip, 0, 100000 * self.EmoteData.Flip)
-                r.AssemblyAngularVelocity = Vector3.new(100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip)
+                flip = flip * -1
+                r.AssemblyLinearVelocity = Vector3.new(100000 * flip, 0, 100000 * flip)
+                r.AssemblyAngularVelocity = Vector3.new(100000 * flip, 100000 * flip, 100000 * flip)
 
                 RunService.RenderStepped:Wait()
 
                 if not self.Config.EmoteFling or not self.Active then break end
 
                 if dir.Magnitude > 0 then
-                    local spd = 16 
+                    local spd = 16 -- Оригинальная фиксированная скорость флинга
                     r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
                     r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
                 else
@@ -215,6 +200,7 @@ function Core:ToggleEmoteFling()
                 break
             end
         end
+
         EmoteFlingCleanup()
     end)
 end
