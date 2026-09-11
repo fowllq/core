@@ -1,7 +1,3 @@
--- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v12.1 BY @FOWLLQ (STRICT ANTI-FALL) - PART 1
--- ============================================================================
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -13,7 +9,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "12.1.0",
+    Version = "13.0.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -22,16 +18,12 @@ local Core = {
         InfJump = false,
         Noclip = false,
         Fly = false,
-        FlySpeed = 50,
         EmoteFling = false,
         antiFallEnabled = true
     },
     Connections = {},
     Physics = { bVelocity = nil, bGyro = nil },
-    EmoteData = {
-        Track = nil,
-        AnimId = "133566007754001"
-    }
+    Track = nil
 }
 
 local function SecureEnvironment()
@@ -45,7 +37,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v12.1 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v13.0 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -67,54 +59,37 @@ local function applyHighlight(player, char)
 
     local conn
     conn = RunService.Heartbeat:Connect(function()
-        if not Core.Active or not char or not char:IsDescendantOf(Workspace) then
-            highlight:Destroy()
-            conn:Disconnect()
-            return
-        end
+        if not ScreenGui.Parent or not char or not char:IsDescendantOf(workspace) then highlight:Destroy() conn:Disconnect() return end
         highlight.Enabled = Core.Config.Esp
     end)
-    table.insert(Core.Connections, conn)
 end
 
 function Core:InitESP()
-    local function monitorPlayer(player)
-        if player == LocalPlayer then return end
-        if player.Character then task.spawn(applyHighlight, player, player.Character) end
-        player.CharacterAdded:Connect(function(char) task.spawn(applyHighlight, player, char) end)
-    end
-    for _, p in ipairs(Players:GetPlayers()) do monitorPlayer(p) end
-    table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
+    Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(c) applyHighlight(p, c) end) end)
+    for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer and p.Character then applyHighlight(p, p.Character) end end
 end
--- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v12.1 BY @FOWLLQ (STRICT ANTI-FALL) - PART 2
--- ============================================================================
 
--- СТРОЖАЙШАЯ ПОСТРОЧНАЯ ИНТЕГРАЦИЯ АНТИ-ФАЛЛА ИЗ ТВОЕГО ИСХОДНИКА (ФАЙЛ 6)
 function Core:HookAntiFall(char)
     task.spawn(function()
         local r = char:WaitForChild("HumanoidRootPart", 10)
-        if r and self.Config.antiFallEnabled then
-            local hb = RunService.Heartbeat
-            local rsd = RunService.RenderStepped
-            local z = Vector3.zero
+        if not r then return end
+        
+        local conn
+        conn = RunService.Heartbeat:Connect(function()
+            if not self.Active or not self.Config.antiFallEnabled or not r or not r.Parent then 
+                if conn then conn:Disconnect() end 
+                return 
+            end
             
-            local conn
-            conn = hb:Connect(function()
-                if not self.Active or not self.Config.antiFallEnabled or not r.Parent then 
-                    if conn then conn:Disconnect() end 
-                    return 
-                end
-                -- Точные оригинальные манипуляции со скоростями
-                local v = r.AssemblyLinearVelocity
-                r.AssemblyLinearVelocity = z
-                rsd:Wait() -- Критический микро-тайминг кадра рендеринга
-                if r and r.Parent then
-                    r.AssemblyLinearVelocity = v
-                end
-            end)
-            table.insert(self.Connections, conn)
-        end
+            local v = r.AssemblyLinearVelocity
+            r.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            RunService.RenderStepped:Wait()
+            
+            if r and r.Parent then 
+                r.AssemblyLinearVelocity = v 
+            end
+        end)
+        table.insert(self.Connections, conn)
     end)
 end
 
@@ -129,16 +104,13 @@ end
 
 local function EmoteFlingCleanup()
     Core.Config.EmoteFling = false
-    if Core.EmoteData.Track then pcall(function() Core.EmoteData.Track:Stop() end) Core.EmoteData.Track = nil end
+    if Core.Track then pcall(function() Core.Track:Stop() end) Core.Track = nil end
     local char = LocalPlayer.Character
-    if char then
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.Velocity = Vector3.zero
-            hrp.RotVelocity = Vector3.zero
-        end
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+        char.HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
+        char.HumanoidRootPart.Velocity = Vector3.zero
+        char.HumanoidRootPart.RotVelocity = Vector3.zero
     end
 end
 
@@ -152,59 +124,42 @@ function Core:ToggleEmoteFling()
     if not (hrp and hum) then return end
 
     local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://" .. self.EmoteData.AnimId
-    local trackOk, track = pcall(function() return hum:LoadAnimation(anim) end)
-    if not trackOk or not track then return end
+    anim.AnimationId = "rbxassetid://133566007754001"
+    local trackOk, t = pcall(function() return hum:LoadAnimation(anim) end)
+    if not trackOk or not t then return end
 
-    self.Config.EmoteFling = true
-    self.EmoteData.Track = track
+    self.Config.EmoteFling = true self.Track = t
+    t.Priority = Enum.AnimationPriority.Action
+    t.Looped = false t:Play()
 
     task.spawn(function()
-        local animStopped = false
-        local trackStoppedConn
-        trackStoppedConn = track.Stopped:Once(function() animStopped = true if trackStoppedConn then pcall(function() trackStoppedConn:Disconnect() end) end end)
-
-        track.Priority = Enum.AnimationPriority.Action
-        track.Looped = false
-        track:Play()
-
-        local flip = 1
-        local timeout = tick() + 300 
+        local flip = 1 local timeout = tick() + 300 local animStopped = false
+        t.Stopped:Once(function() animStopped = true end)
 
         while self.Config.EmoteFling and self.Active and not animStopped do
             if tick() > timeout then break end
-            
             RunService.Heartbeat:Wait()
+            local c = LocalPlayer.Character local r = c and c:FindFirstChild("HumanoidRootPart") local h = c and c:FindFirstChildWhichIsA("Humanoid")
 
-            local c = LocalPlayer.Character
-            local r = c and c:FindFirstChild("HumanoidRootPart")
-            local h = c and c:FindFirstChildWhichIsA("Humanoid")
-
-            if r and h then
+            if r and r.Parent and h then
                 local dir = h.MoveDirection
                 flip = flip * -1
                 r.AssemblyLinearVelocity = Vector3.new(100000 * flip, 0, 100000 * flip)
                 r.AssemblyAngularVelocity = Vector3.new(100000 * flip, 100000 * flip, 100000 * flip)
 
                 RunService.RenderStepped:Wait()
-
                 if not self.Config.EmoteFling or not self.Active then break end
 
                 if dir.Magnitude > 0 then
-                    local spd = 16 
-                    r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
-                    r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
+                    r.AssemblyLinearVelocity = Vector3.new(dir.X * 16, -2, dir.Z * 16)
+                    r.Velocity = Vector3.new(dir.X * 16, -2, dir.Z * 16)
                 else
                     r.AssemblyLinearVelocity = Vector3.new(0, -2, 0)
                     r.Velocity = Vector3.new(0, -2, 0)
                 end
-                r.AssemblyAngularVelocity = Vector3.zero
-                r.RotVelocity = Vector3.zero
-            else
-                break
-            end
+                r.AssemblyAngularVelocity = Vector3.zero r.RotVelocity = Vector3.zero
+            else break end
         end
-
         EmoteFlingCleanup()
     end)
 end
@@ -233,18 +188,10 @@ function Core:StartMainLoop()
 
         if Core.Config.Fly and not Core.Config.EmoteFling then
             if not Core.Physics.bVelocity or Core.Physics.bVelocity.Parent ~= root then
-                Core.Physics.bVelocity = Instance.new("BodyVelocity")
-                Core.Physics.bVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-                Core.Physics.bVelocity.Velocity = Vector3.new(0, 0, 0)
-                Core.Physics.bVelocity.Parent = root
-                
-                Core.Physics.bGyro = Instance.new("BodyGyro")
-                Core.Physics.bGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-                Core.Physics.bGyro.CFrame = root.CFrame
-                Core.Physics.bGyro.Parent = root
+                Core.Physics.bVelocity = Instance.new("BodyVelocity") Core.Physics.bVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5) Core.Physics.bVelocity.Velocity = Vector3.zero Core.Physics.bVelocity.Parent = root
+                Core.Physics.bGyro = Instance.new("BodyGyro") Core.Physics.bGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5) Core.Physics.bGyro.CFrame = root.CFrame Core.Physics.bGyro.Parent = root
             end
-            
-            local moveVec = Vector3.new(0, 0, 0)
+            local moveVec = Vector3.zero
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + Camera.CFrame.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec - Camera.CFrame.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec - Camera.CFrame.RightVector end
@@ -252,24 +199,17 @@ function Core:StartMainLoop()
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVec = moveVec + Vector3.new(0, 1, 0) end
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVec = moveVec - Vector3.new(0, 1, 0) end
             
-            if moveVec.Magnitude > 0 then
-                Core.Physics.bVelocity.Velocity = moveVec.Unit * Core.Config.SpeedValue
-            else
-                Core.Physics.bVelocity.Velocity = Vector3.new(0, 0, 0)
-            end
+            Core.Physics.bVelocity.Velocity = moveVec.Magnitude > 0 and moveVec.Unit * Core.Config.SpeedValue or Vector3.zero
             Core.Physics.bGyro.CFrame = Camera.CFrame
             root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         else
             if not Core.Config.EmoteFling then
-                if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() Core.Physics.bVelocity = nil end
-                if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() Core.Physics.bGyro = nil end
+                if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() Core.Physics.bVelocity = nil Core.Physics.bGyro:Destroy() Core.Physics.bGyro = nil end
             end
         end
 
         if Core.Config.Noclip or Core.Config.EmoteFling then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = false end
-            end
+            for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = false end end
         end
     end)
     table.insert(Core.Connections, loopConn)
