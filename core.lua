@@ -1,5 +1,5 @@
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v11.0 BY @FOWLLQ (ANIMATED BYPASS) - PART 1
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v11.2 BY @FOWLLQ (ANTI-FALL SUPPRESS) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "11.0.0",
+    Version = "11.2.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -46,7 +46,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v11.0 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v11.2 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -88,24 +88,33 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v11.0 BY @FOWLLQ (ANIMATED BYPASS) - PART 2
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v11.2 BY @FOWLLQ (ANTI-FALL SUPPRESS) - PART 2
 -- ============================================================================
 
+-- ПОЛНОСТЬЮ ПЕРЕПИСАННЫЙ, НЕУБИВАЕМЫЙ АНТИ-ФАЛЛ СРЕЗ СКОРОСТИ
 function Core:HookAntiFall(char)
     task.spawn(function()
         local r = char:WaitForChild("HumanoidRootPart", 10)
-        if r then
+        local h = char:WaitForChild("Humanoid", 10)
+        if r and h then
             local conn
             conn = RunService.Heartbeat:Connect(function()
                 if not self.Active or not self.Config.antiFallEnabled or not r.Parent then 
                     if conn then conn:Disconnect() end 
                     return 
                 end
+                
                 local v = r.AssemblyLinearVelocity
-                if v.Y < -20 then
+                -- Если персонаж летит вниз быстрее, чем обычный шаг (ось Y уходит в минус)
+                if v.Y < -5 then
+                    -- Жестко срезаем вертикальное падение в 0, оставляя только боковой разгон (X, Z)
                     r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
-                    RunService.RenderStepped:Wait()
-                    if r and r.Parent then r.AssemblyLinearVelocity = v end
+                    r.Velocity = Vector3.new(v.X, 0, v.Z)
+                    
+                    -- Сбрасываем стейт падения гуманоида, чтобы сервер не успел выдать дамаг
+                    if h:GetState() == Enum.HumanoidStateType.Freefall or h:GetState() == Enum.HumanoidStateType.FallingDown then
+                        h:ChangeState(Enum.HumanoidStateType.Running)
+                    end
                 end
             end)
             table.insert(self.Connections, conn)
@@ -154,7 +163,6 @@ function Core:ToggleEmoteFling()
 
     if not (hrp and hum) then return end
 
-    -- Однократная кэшированная загрузка анимации дропкика в обход лимита 32 треков
     local anim = Instance.new("Animation")
     anim.AnimationId = self.EmoteData.AnimId
     local trackOk, track = pcall(function() return hum:LoadAnimation(anim) end)
@@ -172,7 +180,6 @@ function Core:ToggleEmoteFling()
         
         local timeout = tick() + 300 
 
-        -- ТВОЙ РОДНОЙ ИСХОДНЫЙ ЦИКЛ ОДИН В ОДИН С АНИМАЦИЕЙ
         while self.Config.EmoteFling and self.Active and not animStopped do
             if tick() > timeout then break end
             RunService.Heartbeat:Wait()
@@ -185,7 +192,6 @@ function Core:ToggleEmoteFling()
                 local dir = h.MoveDirection
                 self.EmoteData.Flip = self.EmoteData.Flip * -1
                 
-                -- Локальная блокировка моментальной смерти от столкновений с коллизиями игроков
                 h.Health = 100
                 
                 r.AssemblyLinearVelocity = Vector3.new(100000 * self.EmoteData.Flip, 0, 100000 * self.EmoteData.Flip)
