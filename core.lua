@@ -1,5 +1,5 @@
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.0 BY @FOWLLQ (EXCLUSIVELY LOGIC / NO GUI) - PART 1
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v3.1 BY @FOWLLQ (FIXED EXPLICIT) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,8 +13,8 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "3.0.0",
-    WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА", 
+    Version = "3.1.0",
+    WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
         Speed = false,
@@ -33,7 +33,7 @@ local Core = {
     Physics = { bVelocity = nil, bGyro = nil },
     EmoteData = {
         Track = nil,
-        AnimId = "rbxassetid://133566007754001", 
+        AnimId = "rbxassetid://133566007754001",
         Flip = 1
     }
 }
@@ -49,7 +49,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v3.0 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v3.1 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -91,7 +91,7 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.0 BY @FOWLLQ (EXCLUSIVELY LOGIC / NO GUI) - PART 2
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v3.1 BY @FOWLLQ (FIXED EXPLICIT) - PART 2
 -- ============================================================================
 
 function Core:ManageEmoteFlingTrack(hum, root)
@@ -103,20 +103,51 @@ function Core:ManageEmoteFlingTrack(hum, root)
             if ok and track then
                 self.EmoteData.Track = track
                 track.Priority = Enum.AnimationPriority.Action
-                track.Looped = true
+                track.Looped = false
                 track:Play()
+                
+                task.spawn(function()
+                    local timeout = tick() + 300 
+                    while self.Config.EmoteFling and self.Active and track.IsPlaying do
+                        if tick() > timeout then break end
+                        RunService.Heartbeat:Wait()
+                        
+                        local c = LocalPlayer.Character
+                        local r = c and c:FindFirstChild("HumanoidRootPart")
+                        local h = c and c:FindFirstChildWhichIsA("Humanoid")
+                        
+                        if r and h then
+                            local dir = h.MoveDirection
+                            self.EmoteData.Flip = self.EmoteData.Flip * -1
+                            
+                            r.AssemblyLinearVelocity = Vector3.new(100000 * self.EmoteData.Flip, 0, 100000 * self.EmoteData.Flip)
+                            r.AssemblyAngularVelocity = Vector3.new(100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip)
+                            
+                            RunService.RenderStepped:Wait()
+                            if not self.Config.EmoteFling or not self.Active then break end
+                            
+                            if dir.Magnitude > 0 then
+                                local spd = self.Config.SpeedValue
+                                r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
+                                r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
+                            else
+                                r.AssemblyLinearVelocity = Vector3.new(0, -2, 0)
+                                r.Velocity = Vector3.new(0, -2, 0)
+                            end
+                            r.AssemblyAngularVelocity = Vector3.zero
+                            r.RotVelocity = Vector3.zero
+                        else
+                            break
+                        end
+                    end
+                    if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
+                    if r then r.AssemblyLinearVelocity = Vector3.zero r.AssemblyAngularVelocity = Vector3.zero end
+                end)
             end
         end
-        self.EmoteData.Flip = self.EmoteData.Flip * -1
-        root.AssemblyLinearVelocity = Vector3.new(100000 * self.EmoteData.Flip, 0, 100000 * self.EmoteData.Flip)
-        root.AssemblyAngularVelocity = Vector3.new(100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip)
     else
-        if self.EmoteData.Track then
-            pcall(function() self.EmoteData.Track:Stop() end)
-            self.EmoteData.Track = nil
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
-        end
+        if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
+        if root then root.AssemblyLinearVelocity = Vector3.zero root.AssemblyAngularVelocity = Vector3.zero end
     end
 end
 
@@ -137,14 +168,9 @@ function Core:StartMainLoop()
 
         if Core.Config.Speed and not Core.Config.Fly then 
             hum.WalkSpeed = Core.Config.SpeedValue 
-            if Core.Config.EmoteFling and hum.MoveDirection.Magnitude > 0 then
-                root.AssemblyLinearVelocity = Vector3.new(hum.MoveDirection.X * Core.Config.SpeedValue, -2, hum.MoveDirection.Z * Core.Config.SpeedValue)
-            end
         else
             if hum.WalkSpeed == Core.Config.SpeedValue then hum.WalkSpeed = 16 end
         end
-
-        self:ManageEmoteFlingTrack(hum, root)
 
         if Core.Config.Fly then
             if not Core.Physics.bVelocity or Core.Physics.bVelocity.Parent ~= root then
@@ -190,7 +216,8 @@ function Core:StartMainLoop()
             end
         end
 
-        if Config.FlingAura and not Core.Config.EmoteFling then
+        -- ИСПРАВЛЕНО: Теперь тут жестко прописан Core.Config
+        if Core.Config.FlingAura and not Core.Config.EmoteFling then
             root.AssemblyAngularVelocity = Vector3.new(0, 99999, 0)
             if hum.MoveDirection.Magnitude > 0 then
                 root.AssemblyLinearVelocity = hum.MoveDirection * 250
@@ -238,25 +265,18 @@ end
 function Core:Unload()
     Core.Active = false
     Core.Config = { Esp = false, Speed = false, InfJump = false, Noclip = false, Fly = false, FlingAura = false, EmoteFling = false, AntiFling = false, AntiRagdoll = false, Godmode = false }
-    
     if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
     for _, conn in ipairs(Core.Connections) do if conn then conn:Disconnect() end end
     Core.Connections = {}
-
     if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() end
     if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() end
-    
     pcall(function()
         local char = LocalPlayer.Character
         if char then
             local root = char:FindFirstChild("HumanoidRootPart")
             if root then root.AssemblyAngularVelocity = Vector3.zero root.AssemblyLinearVelocity = Vector3.zero end
             local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then 
-                hum.WalkSpeed = 16 
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true) 
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true) 
-            end
+            if hum then hum.WalkSpeed = 16 hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true) hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true) end
             for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = true end end
         end
     end)
