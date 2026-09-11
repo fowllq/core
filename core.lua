@@ -188,6 +188,7 @@ end
 function Core:StartMainLoop()
     SecureEnvironment()
     self:SendLog()
+    self:InitESP()
     self:InitAntiFallService()
 
     local loopConn
