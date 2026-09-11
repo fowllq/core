@@ -283,15 +283,21 @@ function Core:InitJump()
 end
 
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.5 BY @FOWLLQ - ULTIMATE DAMAGE BYPASS ENDING
+-- PURE HVH CORE FRAMEWORK v3.6 BY @FOWLLQ - STRICT ORIGINAL CLEANUP ENDING
 -- ============================================================================
 
 function Core:Unload()
     Core.Active = false
     Core.Config = { Esp = false, Speed = false, InfJump = false, Noclip = false, Fly = false, EmoteFling = false, AntiFling = false, AntiRagdoll = false, Godmode = false }
     
-    if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
-    for _, conn in ipairs(Core.Connections) do if conn then conn:Disconnect() end end
+    if self.EmoteData.Track then 
+        pcall(function() self.EmoteData.Track:Stop() end) 
+        self.EmoteData.Track = nil 
+    end
+    
+    for _, conn in ipairs(Core.Connections) do 
+        if conn then conn:Disconnect() end 
+    end
     Core.Connections = {}
     
     if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() end
@@ -300,24 +306,20 @@ function Core:Unload()
     pcall(function()
         local char = LocalPlayer.Character
         if char then
+            -- ОРИГИНАЛЬНЫЙ ФИЗИЧЕСКИЙ СБРОС ИЗ ИСХОДНИКА (EMOTEFLINGCLEANUP)
             local root = char:FindFirstChild("HumanoidRootPart")
             if root then 
-                root.AssemblyLinearVelocity = Vector3.zero 
+                root.AssemblyLinearVelocity = Vector3.zero
                 root.AssemblyAngularVelocity = Vector3.zero
                 root.Velocity = Vector3.zero
                 root.RotVelocity = Vector3.zero
             end
             
-            -- ЖЕСТКИЙ ОБХОД УРОНА: Пересоздаем гуманоид, полностью стирая накопленный урон
-            local oldHum = char:FindFirstChildOfClass("Humanoid")
-            if oldHum then
-                local newHum = oldHum:Clone()
-                newHum.Name = "Humanoid"
-                oldHum:Destroy() -- Сервер больше не может нанести урон старому объекту
-                newHum.Parent = char
-                task.wait(0.1)
-                newHum.WalkSpeed = 16
-                Workspace.CurrentCamera.CameraSubject = newHum
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then 
+                hum.WalkSpeed = 16 
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true) 
+                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true) 
             end
             
             for _, part in ipairs(char:GetDescendants()) do 
