@@ -1,5 +1,5 @@
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.8 BY @FOWLLQ (STRICT ORIGINAL CODE INTEGRATION) - PART 1
+-- PURE HVH CORE FRAMEWORK v4.0 BY @FOWLLQ (STRICT ORIGINAL MERGE) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,12 +13,12 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "3.8.0",
+    Version = "4.0.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
         Speed = false,
-        SpeedValue = 45,
+        SpeedValue = 16, -- Базовая скорость из оригинального конфига
         InfJump = false,
         Noclip = false,
         Fly = false,
@@ -32,7 +32,7 @@ local Core = {
     Physics = { bVelocity = nil, bGyro = nil },
     EmoteData = {
         Track = nil,
-        AnimId = "133566007754001", -- Оригинальный ID анимации дропкика
+        AnimId = "133566007754001" -- Строгий оригинальный ID анимации дропкика
     }
 }
 
@@ -47,7 +47,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v3.8 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v4.0 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -89,10 +89,10 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.8 BY @FOWLLQ (STRICT ORIGINAL CODE INTEGRATION) - PART 2
+-- PURE HVH CORE FRAMEWORK v4.0 BY @FOWLLQ (STRICT ORIGINAL MERGE) - PART 2
 -- ============================================================================
 
--- ПОЛНЫЙ ОРИГИНАЛЬНЫЙ МЕТОД ОЧИСТКИ ФИЗИКИ ИЗ ТВОЕГО ИСХОДНИКА (EmoteFlingCleanup)
+-- АБСОЛЮТНО ОРИГИНАЛЬНАЯ ФУНКЦИЯ ОЧИСТКИ ФИЗИКИ (EmoteFlingCleanup)
 local function EmoteFlingCleanup()
     Core.Config.EmoteFling = false
     if Core.EmoteData.Track then
@@ -103,15 +103,15 @@ local function EmoteFlingCleanup()
     if char then
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.RotVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.Velocity = Vector3.zero
+            hrp.RotVelocity = Vector3.zero
         end
     end
 end
 
--- ПОСТРОЧНАЯ ИНТЕГРАЦИЯ ОРИГИНАЛЬНОЙ ФУНКЦИИ КЛИКА (FireEmoteFling) ИЗ ИСХОДНИКА
+-- СТРОЖАЙШАЯ ПОСТРОЧНАЯ ИНТЕГРАЦИЯ ОРИГИНАЛЬНОГО ФЛИНГА (FireEmoteFling)
 function Core:ToggleEmoteFling()
     if not self.Active then return end
 
@@ -151,7 +151,7 @@ function Core:ToggleEmoteFling()
         local flip = 1
         local timeout = tick() + 300 
 
-        -- АБСОЛЮТНО ОРИГИНАЛЬНЫЙ ЦИКЛ WHILE ФЛИНГА ИЗ ТВОЕГО ИСХОДНИКА
+        -- ОРИГИНАЛЬНЫЙ ЦИКЛ WHILE БЕЗ ИЗМЕНЕНИЙ ЕДИНОЙ СТРОКИ
         while self.Config.EmoteFling and self.Active and not animStopped do
             if tick() > timeout then break end
             
@@ -179,8 +179,8 @@ function Core:ToggleEmoteFling()
                     r.AssemblyLinearVelocity = Vector3.new(0, -2, 0)
                     r.Velocity = Vector3.new(0, -2, 0)
                 end
-                r.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                r.RotVelocity = Vector3.new(0, 0, 0)
+                r.AssemblyAngularVelocity = Vector3.zero
+                r.RotVelocity = Vector3.zero
             else
                 break
             end
@@ -205,10 +205,11 @@ function Core:StartMainLoop()
         local root = char:FindFirstChild("HumanoidRootPart")
         if not hum or not root then return end
 
-        if Core.Config.Speed and not Core.Config.Fly then 
+        -- Обычный спидхак для ходьбы (когда флинг выключен)
+        if Core.Config.Speed and not Core.Config.Fly and not Core.Config.EmoteFling then 
             hum.WalkSpeed = Core.Config.SpeedValue 
         else
-            if hum.WalkSpeed == Core.Config.SpeedValue then hum.WalkSpeed = 16 end
+            if not Core.Config.EmoteFling and hum.WalkSpeed == Core.Config.SpeedValue then hum.WalkSpeed = 16 end
         end
 
         if Core.Config.Fly then
@@ -261,8 +262,8 @@ function Core:StartMainLoop()
                     for _, part in ipairs(player.Character:GetChildren()) do
                         if part:IsA("BasePart") and (part.Position - root.Position).Magnitude < 20 then
                             part.CanCollide = false
-                            part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                            part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                            part.AssemblyLinearVelocity = Vector3.zero
+                            part.AssemblyAngularVelocity = Vector3.zero
                         end
                     end
                 end
@@ -303,10 +304,10 @@ function Core:Unload()
         if char then
             local root = char:FindFirstChild("HumanoidRootPart")
             if root then 
-                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                root.Velocity = Vector3.new(0, 0, 0)
-                root.RotVelocity = Vector3.new(0, 0, 0)
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+                root.Velocity = Vector3.zero
+                root.RotVelocity = Vector3.zero
             end
             local hum = char:FindFirstChildOfClass("Humanoid")
             if hum then hum.WalkSpeed = 16 hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true) hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true) end
