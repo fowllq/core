@@ -9,7 +9,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "13.0.0",
+    Version = "14.0.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -37,7 +37,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v13.0 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "script started!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -48,8 +48,8 @@ end
 
 local function applyHighlight(player, char)
     if player == LocalPlayer then return end
-    local highlight = char:FindFirstChild("HvH_Core_Highlight") or Instance.new("Highlight")
-    highlight.Name = "HvH_Core_Highlight"
+    local highlight = char:FindFirstChild("Highlight") or Instance.new("Highlight")
+    highlight.Name = "Highlight"
     highlight.FillColor = Color3.fromRGB(255, 0, 80)
     highlight.FillTransparency = 0.5
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -59,14 +59,19 @@ local function applyHighlight(player, char)
 
     local conn
     conn = RunService.Heartbeat:Connect(function()
-        if not ScreenGui.Parent or not char or not char:IsDescendantOf(workspace) then highlight:Destroy() conn:Disconnect() return end
+        if not char or not char:IsDescendantOf(workspace) then highlight:Destroy() conn:Disconnect() return end
         highlight.Enabled = Core.Config.Esp
     end)
 end
 
 function Core:InitESP()
-    Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(c) applyHighlight(p, c) end) end)
-    for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer and p.Character then applyHighlight(p, p.Character) end end
+    local function monitorPlayer(player)
+        if player == LocalPlayer then return end
+        if player.Character then task.spawn(applyHighlight, player, player.Character) end
+        player.CharacterAdded:Connect(function(char) task.spawn(applyHighlight, player, char) end)
+    end
+    for _, p in ipairs(Players:GetPlayers()) do monitorPlayer(p) end
+    table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 
 function Core:HookAntiFall(char)
@@ -106,11 +111,14 @@ local function EmoteFlingCleanup()
     Core.Config.EmoteFling = false
     if Core.Track then pcall(function() Core.Track:Stop() end) Core.Track = nil end
     local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-        char.HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
-        char.HumanoidRootPart.Velocity = Vector3.zero
-        char.HumanoidRootPart.RotVelocity = Vector3.zero
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.Velocity = Vector3.zero
+            hrp.RotVelocity = Vector3.zero
+        end
     end
 end
 
@@ -151,8 +159,9 @@ function Core:ToggleEmoteFling()
                 if not self.Config.EmoteFling or not self.Active then break end
 
                 if dir.Magnitude > 0 then
-                    r.AssemblyLinearVelocity = Vector3.new(dir.X * 16, -2, dir.Z * 16)
-                    r.Velocity = Vector3.new(dir.X * 16, -2, dir.Z * 16)
+                    local spd = self.Config.SpeedValue
+                    r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
+                    r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
                 else
                     r.AssemblyLinearVelocity = Vector3.new(0, -2, 0)
                     r.Velocity = Vector3.new(0, -2, 0)
@@ -209,7 +218,7 @@ function Core:StartMainLoop()
         end
 
         if Core.Config.Noclip or Core.Config.EmoteFling then
-            for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = false end end
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = false end end
         end
     end)
     table.insert(Core.Connections, loopConn)
