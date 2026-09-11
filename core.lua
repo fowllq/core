@@ -1,7 +1,3 @@
--- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v14.1 BY @FOWLLQ (SYNTAX FIXED) - PART 1
--- ============================================================================
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -81,10 +77,6 @@ function Core:InitESP()
     for _, p in ipairs(Players:GetPlayers()) do monitorPlayer(p) end
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
--- ============================================================================
--- PREFERRED ULTIMATE HVH FRAMEWORK CORE v14.1 BY @FOWLLQ (SYNTAX FIXED) - PART 2
--- ============================================================================
-
 function Core:HookAntiFall(char)
     task.spawn(function()
         local r = char:WaitForChild("HumanoidRootPart", 10)
