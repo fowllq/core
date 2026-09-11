@@ -1,5 +1,5 @@
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.4 BY @FOWLLQ (STRICT EMOTE FLING INTEGRATION) - PART 1
+-- PURE HVH CORE FRAMEWORK v3.8 BY @FOWLLQ (STRICT ORIGINAL CODE INTEGRATION) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "3.4.0",
+    Version = "3.8.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -32,8 +32,7 @@ local Core = {
     Physics = { bVelocity = nil, bGyro = nil },
     EmoteData = {
         Track = nil,
-        AnimId = "rbxassetid://133566007754001",
-        Flip = 1
+        AnimId = "133566007754001", -- Оригинальный ID анимации дропкика
     }
 }
 
@@ -48,7 +47,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v3.4 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v3.8 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -90,95 +89,105 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.4 BY @FOWLLQ (STRICT EMOTE FLING INTEGRATION) - PART 2
+-- PURE HVH CORE FRAMEWORK v3.8 BY @FOWLLQ (STRICT ORIGINAL CODE INTEGRATION) - PART 2
 -- ============================================================================
 
-function Core:ManageEmoteFlingTrack(hum, root)
-    if self.Config.EmoteFling then
-        if not self.EmoteData.Track then
-            local anim = Instance.new("Animation")
-            anim.AnimationId = self.EmoteData.AnimId
-            local ok, track = pcall(function() return hum:LoadAnimation(anim) end)
-            if ok and track then
-                self.EmoteData.Track = track
-                track.Priority = Enum.AnimationPriority.Action
-                track.Looped = false
-                track:Play()
-                
-                -- СТРОГАЯ ИДЕНТИЧНАЯ ИНТЕГРАЦИЯ ЦИКЛА ИЗ ИСХОДНИКА
-                task.spawn(function()
-                    local animStopped = false
-                    local trackStoppedConn
-                    trackStoppedConn = track.Stopped:Once(function()
-                        animStopped = true
-                        if trackStoppedConn then pcall(function() trackStoppedConn:Disconnect() end) end
-                    end)
-
-                    local flip = 1
-                    local timeout = tick() + 300 
-
-                    while self.Config.EmoteFling and self.Active and not animStopped do
-                        if tick() > timeout then break end
-                        
-                        RunService.Heartbeat:Wait()
-
-                        local c = LocalPlayer.Character
-                        local r = c and c:FindFirstChild("HumanoidRootPart")
-                        local h = c and c:FindFirstChildWhichIsA("Humanoid")
-
-                        if r and h then
-                            local dir = h.MoveDirection
-                            flip = flip * -1
-                            r.AssemblyLinearVelocity = Vector3.new(100000 * flip, 0, 100000 * flip)
-                            r.AssemblyAngularVelocity = Vector3.new(100000 * flip, 100000 * flip, 100000 * flip)
-
-                            RunService.RenderStepped:Wait()
-
-                            if not self.Config.EmoteFling or not self.Active then break end
-
-                            if dir.Magnitude > 0 then
-                                local spd = self.Config.SpeedValue
-                                r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
-                                r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
-                            else
-                                r.AssemblyLinearVelocity = Vector3.new(0, -2, 0)
-                                r.Velocity = Vector3.new(0, -2, 0)
-                            end
-                            r.AssemblyAngularVelocity = Vector3.zero
-                            r.RotVelocity = Vector3.zero
-                        else
-                            break
-                        end
-                    end
-
-                    -- ОРИГИНАЛЬНЫЙ ОПТИМИЗИРОВАННЫЙ CLEANUP ИЗ ИСХОДНИКА
-                    if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
-                    local char = LocalPlayer.Character
-                    if char then
-                        local hrp = char:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            hrp.Velocity = Vector3.zero
-                            hrp.RotVelocity = Vector3.zero
-                        end
-                    end
-                end)
-            end
-        end
-    else
-        if self.EmoteData.Track then pcall(function() self.EmoteData.Track:Stop() end) self.EmoteData.Track = nil end
-        local char = LocalPlayer.Character
-        if char then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                hrp.Velocity = Vector3.zero
-                hrp.RotVelocity = Vector3.zero
-            end
+-- ПОЛНЫЙ ОРИГИНАЛЬНЫЙ МЕТОД ОЧИСТКИ ФИЗИКИ ИЗ ТВОЕГО ИСХОДНИКА (EmoteFlingCleanup)
+local function EmoteFlingCleanup()
+    Core.Config.EmoteFling = false
+    if Core.EmoteData.Track then
+        pcall(function() Core.EmoteData.Track:Stop() end)
+        Core.EmoteData.Track = nil
+    end
+    local char = LocalPlayer.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.RotVelocity = Vector3.new(0, 0, 0)
         end
     end
+end
+
+-- ПОСТРОЧНАЯ ИНТЕГРАЦИЯ ОРИГИНАЛЬНОЙ ФУНКЦИИ КЛИКА (FireEmoteFling) ИЗ ИСХОДНИКА
+function Core:ToggleEmoteFling()
+    if not self.Active then return end
+
+    if self.Config.EmoteFling then
+        self.Config.EmoteFling = false
+        EmoteFlingCleanup()
+        return
+    end
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+
+    if not (hrp and hum) then return end
+
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://" .. self.EmoteData.AnimId
+
+    local trackOk, track = pcall(function() return hum:LoadAnimation(anim) end)
+    if not trackOk or not track then return end
+
+    self.Config.EmoteFling = true
+    self.EmoteData.Track = track
+
+    local animStopped = false
+    local trackStoppedConn
+    trackStoppedConn = track.Stopped:Once(function()
+        animStopped = true
+        if trackStoppedConn then pcall(function() trackStoppedConn:Disconnect() end) end
+    end)
+
+    track.Priority = Enum.AnimationPriority.Action
+    track.Looped = false
+    track:Play()
+
+    task.spawn(function()
+        local flip = 1
+        local timeout = tick() + 300 
+
+        -- АБСОЛЮТНО ОРИГИНАЛЬНЫЙ ЦИКЛ WHILE ФЛИНГА ИЗ ТВОЕГО ИСХОДНИКА
+        while self.Config.EmoteFling and self.Active and not animStopped do
+            if tick() > timeout then break end
+            
+            RunService.Heartbeat:Wait()
+
+            local c = LocalPlayer.Character
+            local r = c and c:FindFirstChild("HumanoidRootPart")
+            local h = c and c:FindFirstChildWhichIsA("Humanoid")
+
+            if r and h then
+                local dir = h.MoveDirection
+                flip = flip * -1
+                r.AssemblyLinearVelocity = Vector3.new(100000 * flip, 0, 100000 * flip)
+                r.AssemblyAngularVelocity = Vector3.new(100000 * flip, 100000 * flip, 100000 * flip)
+
+                RunService.RenderStepped:Wait()
+
+                if not self.Config.EmoteFling or not self.Active then break end
+
+                if dir.Magnitude > 0 then
+                    local spd = self.Config.SpeedValue
+                    r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
+                    r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
+                else
+                    r.AssemblyLinearVelocity = Vector3.new(0, -2, 0)
+                    r.Velocity = Vector3.new(0, -2, 0)
+                end
+                r.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                r.RotVelocity = Vector3.new(0, 0, 0)
+            else
+                break
+            end
+        end
+
+        EmoteFlingCleanup()
+    end)
 end
 
 function Core:StartMainLoop()
@@ -252,8 +261,8 @@ function Core:StartMainLoop()
                     for _, part in ipairs(player.Character:GetChildren()) do
                         if part:IsA("BasePart") and (part.Position - root.Position).Magnitude < 20 then
                             part.CanCollide = false
-                            part.AssemblyLinearVelocity = Vector3.zero
-                            part.AssemblyAngularVelocity = Vector3.zero
+                            part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                         end
                     end
                 end
@@ -282,51 +291,26 @@ function Core:InitJump()
     table.insert(Core.Connections, jumpConn)
 end
 
--- ============================================================================
--- PURE HVH CORE FRAMEWORK v3.6 BY @FOWLLQ - STRICT ORIGINAL CLEANUP ENDING
--- ============================================================================
-
 function Core:Unload()
     Core.Active = false
-    Core.Config = { Esp = false, Speed = false, InfJump = false, Noclip = false, Fly = false, EmoteFling = false, AntiFling = false, AntiRagdoll = false, Godmode = false }
-    
-    if self.EmoteData.Track then 
-        pcall(function() self.EmoteData.Track:Stop() end) 
-        self.EmoteData.Track = nil 
-    end
-    
-    for _, conn in ipairs(Core.Connections) do 
-        if conn then conn:Disconnect() end 
-    end
+    EmoteFlingCleanup()
+    for _, conn in ipairs(Core.Connections) do if conn then conn:Disconnect() end end
     Core.Connections = {}
-    
     if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() end
     if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() end
-    
     pcall(function()
         local char = LocalPlayer.Character
         if char then
-            -- ОРИГИНАЛЬНЫЙ ФИЗИЧЕСКИЙ СБРОС ИЗ ИСХОДНИКА (EMOTEFLINGCLEANUP)
             local root = char:FindFirstChild("HumanoidRootPart")
             if root then 
-                root.AssemblyLinearVelocity = Vector3.zero
-                root.AssemblyAngularVelocity = Vector3.zero
-                root.Velocity = Vector3.zero
-                root.RotVelocity = Vector3.zero
+                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                root.Velocity = Vector3.new(0, 0, 0)
+                root.RotVelocity = Vector3.new(0, 0, 0)
             end
-            
             local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then 
-                hum.WalkSpeed = 16 
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true) 
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true) 
-            end
-            
-            for _, part in ipairs(char:GetDescendants()) do 
-                if part:IsA("BasePart") then 
-                    part.CanCollide = true 
-                end 
-            end
+            if hum then hum.WalkSpeed = 16 hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true) hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true) end
+            for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = true end end
         end
     end)
 end
