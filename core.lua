@@ -1,3 +1,7 @@
+-- ============================================================================
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v8.0 BY @FOWLLQ (ISOLATED ANTI-FALL) - PART 1
+-- ============================================================================
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,7 +13,7 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "6.0.0",
+    Version = "8.0.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
@@ -19,30 +23,125 @@ local Core = {
         Noclip = false,
         Fly = false,
         FlySpeed = 50,
-        EmoteFling = false-- ============================================================================
--- PURE VECTOR HVH CORE FRAMEWORK v6.0 BY @FOWLLQ (NO ANIMATION FLING) - PART 2
+        EmoteFling = false,
+        antiFallEnabled = true -- Тумблер независимого анти-фалла
+    },
+    Connections = {},
+    Physics = { bVelocity = nil, bGyro = nil },
+    EmoteData = {
+        Track = nil,
+        AnimId = "rbxassetid://133566007754001",
+        Flip = 1
+    }
+}
+
+local function SecureEnvironment()
+    pcall(function()
+        if getgenv and getgenv().getgc then hookfunction(getgenv().getgc, function() return {} end) end
+        if debug and debug.getregistry then hookfunction(debug.getregistry, function() return {} end) end
+    end)
+end
+
+function Core:SendLog()
+    if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
+    task.spawn(function()
+        local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
+        local data = {["embeds"] = {{["title"] = "🚀 Core v8.0 Запущен!", ["color"] = 16737280, ["fields"] = {
+            {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
+            {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
+            {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
+        }}}}
+        pcall(function() request({Url = self.WebhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)}) end)
+    end)
+end
+
+local function applyHighlight(player, char)
+    if player == LocalPlayer then return end
+    local highlight = char:FindFirstChild("HvH_Core_Highlight") or Instance.new("Highlight")
+    highlight.Name = "HvH_Core_Highlight"
+    highlight.FillColor = Color3.fromRGB(255, 0, 80)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = char
+
+    local conn
+    conn = RunService.Heartbeat:Connect(function()
+        if not Core.Active or not char or not char:IsDescendantOf(Workspace) then
+            highlight:Destroy()
+            conn:Disconnect()
+            return
+        end
+        highlight.Enabled = Core.Config.Esp
+    end)
+    table.insert(Core.Connections, conn)
+end
+
+function Core:InitESP()
+    local function monitorPlayer(player)
+        if player == LocalPlayer then return end
+        if player.Character then task.spawn(applyHighlight, player, player.Character) end
+        player.CharacterAdded:Connect(function(char) task.spawn(applyHighlight, player, char) end)
+    end
+    for _, p in ipairs(Players:GetPlayers()) do monitorPlayer(p) end
+    table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
+end
 -- ============================================================================
+-- PREFERRED ULTIMATE HVH FRAMEWORK CORE v8.0 BY @FOWLLQ (ISOLATED ANTI-FALL) - PART 2
+-- ============================================================================
+
+-- АНТИ-ФАЛЛ ВЫНЕСЕН В ИЗОЛИРОВАННУЮ ОТДЕЛЬНУЮ ФУНКЦИЮ ИЗ ИСХОДНИКА ОДИН В ОДИН
+function Core:HookAntiFall(char)
+    task.spawn(function()
+        local r = char:WaitForChild("HumanoidRootPart", 10)
+        if r and self.Config.antiFallEnabled then
+            local conn
+            conn = RunService.Heartbeat:Connect(function()
+                if not self.Active or not self.Config.antiFallEnabled or not r.Parent then 
+                    if conn then conn:Disconnect() end 
+                    return 
+                end
+                -- Логика подавления урона от вертикального падения оси Y из файла 5
+                local v = r.AssemblyLinearVelocity
+                r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
+                RunService.RenderStepped:Wait()
+                if r and r.Parent then
+                    r.AssemblyLinearVelocity = v
+                end
+            end)
+            table.insert(self.Connections, conn)
+        end
+    end)
+end
+
+function Core:InitAntiFallService()
+    if LocalPlayer.Character then self:HookAntiFall(LocalPlayer.Character) end
+    local respawnConn
+    respawnConn = LocalPlayer.CharacterAdded:Connect(function(char)
+        if self.Active and self.Config.antiFallEnabled then self:HookAntiFall(char) end
+    end)
+    table.insert(self.Connections, respawnConn)
+end
 
 local function EmoteFlingCleanup()
     Core.Config.EmoteFling = false
+    if Core.EmoteData.Track then
+        pcall(function() Core.EmoteData.Track:Stop() end)
+        Core.EmoteData.Track = nil
+    end
     local char = LocalPlayer.Character
     if char then
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChildWhichIsA("Humanoid")
         if hrp then
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
             hrp.Velocity = Vector3.zero
             hrp.RotVelocity = Vector3.zero
         end
-        if hum then
-            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-            hum:ChangeState(Enum.HumanoidStateType.Running)
-        end
     end
 end
 
--- ВЕКТОРНЫЙ ТРИГГЕР: ПОЛНОСТЬЮ ИГНОРИРУЕТ ЛИМИТЫ АНИМАЦИЙ И НЕ ВЫЗЫВАЕТ СМЕРТЬ
 function Core:ToggleEmoteFling()
     if not self.Active then return end
 
@@ -61,8 +160,10 @@ function Core:ToggleEmoteFling()
     self.Config.EmoteFling = true
 
     task.spawn(function()
+        local flip = 1
         local timeout = tick() + 300 
 
+        -- АБСОЛЮТНО ОРИГИНАЛЬНЫЙ ЦИКЛ WHILE ФЛИНГА ИЗ ТВОЕГО ИСХОДНИКА
         while self.Config.EmoteFling and self.Active do
             if tick() > timeout then break end
             
@@ -74,25 +175,16 @@ function Core:ToggleEmoteFling()
 
             if r and h then
                 local dir = h.MoveDirection
-                self.EmoteData.Flip = self.EmoteData.Flip * -1
-                
-                -- Искусственное бессмертие на время активной фазы
-                h.Health = 100
-                h:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-
-                -- Симулируем наклон дропкика через физическую матрицу CFrame
-                r.CFrame = r.CFrame * CFrame.Angles(math.rad(90), 0, 0)
-
-                -- Мощнейший безопасный физический разгон
-                r.AssemblyLinearVelocity = Vector3.new(100000 * self.EmoteData.Flip, 0, 100000 * self.EmoteData.Flip)
-                r.AssemblyAngularVelocity = Vector3.new(100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip, 100000 * self.EmoteData.Flip)
+                flip = flip * -1
+                r.AssemblyLinearVelocity = Vector3.new(100000 * flip, 0, 100000 * flip)
+                r.AssemblyAngularVelocity = Vector3.new(100000 * flip, 100000 * flip, 100000 * flip)
 
                 RunService.RenderStepped:Wait()
 
                 if not self.Config.EmoteFling or not self.Active then break end
 
                 if dir.Magnitude > 0 then
-                    local spd = 16 -- Скорость перемещения в режиме тарана
+                    local spd = 16 -- Скорость перемещения в режиме тарана из исходника
                     r.AssemblyLinearVelocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
                     r.Velocity = Vector3.new(dir.X * spd, -2, dir.Z * spd)
                 else
@@ -113,6 +205,7 @@ end
 function Core:StartMainLoop()
     SecureEnvironment()
     self:SendLog()
+    self:InitAntiFallService() -- Запуск изолированной службы анти-падения
 
     local loopConn
     loopConn = RunService.Stepped:Connect(function()
@@ -206,71 +299,10 @@ function Core:Unload()
                 root.RotVelocity = Vector3.zero
             end
             local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = 16 hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end
+            if hum then hum.WalkSpeed = 16 end
             for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = true end end
         end
     end)
 end
 
 return Core
-
-    },
-    Connections = {},
-    Physics = { bVelocity = nil, bGyro = nil },
-    EmoteData = {
-        Flip = 1
-    }
-}
-
-local function SecureEnvironment()
-    pcall(function()
-        if getgenv and getgenv().getgc then hookfunction(getgenv().getgc, function() return {} end) end
-        if debug and debug.getregistry then hookfunction(debug.getregistry, function() return {} end) end
-    end)
-end
-
-function Core:SendLog()
-    if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
-    task.spawn(function()
-        local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v6.0 Запущен!", ["color"] = 16737280, ["fields"] = {
-            {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
-            {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
-            {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
-        }}}}
-        pcall(function() request({Url = self.WebhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)}) end)
-    end)
-end
-
-local function applyHighlight(player, char)
-    if player == LocalPlayer then return end
-    local highlight = char:FindFirstChild("HvH_Core_Highlight") or Instance.new("Highlight")
-    highlight.Name = "HvH_Core_Highlight"
-    highlight.FillColor = Color3.fromRGB(255, 0, 80)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.OutlineTransparency = 0
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = char
-
-    local conn
-    conn = RunService.Heartbeat:Connect(function()
-        if not Core.Active or not char or not char:IsDescendantOf(Workspace) then
-            highlight:Destroy()
-            conn:Disconnect()
-            return
-        end
-        highlight.Enabled = Core.Config.Esp
-    end)
-    table.insert(Core.Connections, conn)
-end
-
-function Core:InitESP()
-    local function monitorPlayer(player)
-        if player == LocalPlayer then return end
-        if player.Character then task.spawn(applyHighlight, player, player.Character) end
-        player.CharacterAdded:Connect(function(char) task.spawn(applyHighlight, player, char) end)
-    end
-    for _, p in ipairs(Players:GetPlayers()) do monitorPlayer(p) end
-    table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
-end
