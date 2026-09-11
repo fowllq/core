@@ -1,5 +1,5 @@
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v4.0 BY @FOWLLQ (STRICT ORIGINAL MERGE) - PART 1
+-- PURE HVH CORE FRAMEWORK v4.1 BY @FOWLLQ (STRICT ISOLATION MODE) - PART 1
 -- ============================================================================
 
 local Players = game:GetService("Players")
@@ -13,12 +13,12 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "4.0.0",
+    Version = "4.1.0",
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
         Speed = false,
-        SpeedValue = 16, -- Базовая скорость из оригинального конфига
+        SpeedValue = 16, 
         InfJump = false,
         Noclip = false,
         Fly = false,
@@ -32,7 +32,7 @@ local Core = {
     Physics = { bVelocity = nil, bGyro = nil },
     EmoteData = {
         Track = nil,
-        AnimId = "133566007754001" -- Строгий оригинальный ID анимации дропкика
+        AnimId = "133566007754001" 
     }
 }
 
@@ -47,7 +47,7 @@ function Core:SendLog()
     if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v4.0 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "🚀 Core v4.1 Запущен!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -74,7 +74,12 @@ local function applyHighlight(player, char)
             conn:Disconnect()
             return
         end
-        highlight.Enabled = Core.Config.Esp
+        -- Если включен флинг — ESP принудительно засыпает для разгрузки физики
+        if Core.Config.EmoteFling then
+            highlight.Enabled = false
+        else
+            highlight.Enabled = Core.Config.Esp
+        end
     end)
     table.insert(Core.Connections, conn)
 end
@@ -89,10 +94,9 @@ function Core:InitESP()
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
 -- ============================================================================
--- PURE HVH CORE FRAMEWORK v4.0 BY @FOWLLQ (STRICT ORIGINAL MERGE) - PART 2
+-- PURE HVH CORE FRAMEWORK v4.1 BY @FOWLLQ (STRICT ISOLATION MODE) - PART 2
 -- ============================================================================
 
--- АБСОЛЮТНО ОРИГИНАЛЬНАЯ ФУНКЦИЯ ОЧИСТКИ ФИЗИКИ (EmoteFlingCleanup)
 local function EmoteFlingCleanup()
     Core.Config.EmoteFling = false
     if Core.EmoteData.Track then
@@ -111,7 +115,6 @@ local function EmoteFlingCleanup()
     end
 end
 
--- СТРОЖАЙШАЯ ПОСТРОЧНАЯ ИНТЕГРАЦИЯ ОРИГИНАЛЬНОГО ФЛИНГА (FireEmoteFling)
 function Core:ToggleEmoteFling()
     if not self.Active then return end
 
@@ -151,7 +154,7 @@ function Core:ToggleEmoteFling()
         local flip = 1
         local timeout = tick() + 300 
 
-        -- ОРИГИНАЛЬНЫЙ ЦИКЛ WHILE БЕЗ ИЗМЕНЕНИЙ ЕДИНОЙ СТРОКИ
+        -- Полностью изолированный цикл флинга из исходника
         while self.Config.EmoteFling and self.Active and not animStopped do
             if tick() > timeout then break end
             
@@ -205,13 +208,21 @@ function Core:StartMainLoop()
         local root = char:FindFirstChild("HumanoidRootPart")
         if not hum or not root then return end
 
-        -- Обычный спидхак для ходьбы (когда флинг выключен)
-        if Core.Config.Speed and not Core.Config.Fly and not Core.Config.EmoteFling then 
-            hum.WalkSpeed = Core.Config.SpeedValue 
-        else
-            if not Core.Config.EmoteFling and hum.WalkSpeed == Core.Config.SpeedValue then hum.WalkSpeed = 16 end
+        -- ИЗОЛЯЦИЯ: Если флинг включен — другие функции полностью засыпают
+        if Core.Config.EmoteFling then
+            if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() Core.Physics.bVelocity = nil end
+            if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() Core.Physics.bGyro = nil end
+            return 
         end
 
+        -- Обычный спидхак для ходьбы
+        if Core.Config.Speed and not Core.Config.Fly then 
+            hum.WalkSpeed = Core.Config.SpeedValue 
+        else
+            if hum.WalkSpeed == Core.Config.SpeedValue then hum.WalkSpeed = 16 end
+        end
+
+        -- Обычный полет
         if Core.Config.Fly then
             if not Core.Physics.bVelocity or Core.Physics.bVelocity.Parent ~= root then
                 Core.Physics.bVelocity = Instance.new("BodyVelocity")
@@ -241,10 +252,8 @@ function Core:StartMainLoop()
             Core.Physics.bGyro.CFrame = Camera.CFrame
             root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         else
-            if not Core.Config.EmoteFling then
-                if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() Core.Physics.bVelocity = nil end
-                if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() Core.Physics.bGyro = nil end
-            end
+            if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() Core.Physics.bVelocity = nil end
+            if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() Core.Physics.bGyro = nil end
         end
 
         if Core.Config.Godmode or Core.Config.AntiRagdoll then
@@ -270,7 +279,7 @@ function Core:StartMainLoop()
             end
         end
 
-        if Core.Config.Noclip or Core.Config.EmoteFling then
+        if Core.Config.Noclip then
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = false end
             end
