@@ -13,6 +13,7 @@ local Core = {
     WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
     Config = {
         Esp = false,
+        EspRadius = 250, -- Максимальный радиус отрисовки ESP в блоках
         Speed = false,
         SpeedValue = 45,
         InfJump = false,
@@ -52,20 +53,54 @@ end
 
 local function applyHighlight(player, char)
     if player == LocalPlayer then return end
-    local highlight = char:FindFirstChild("HvH_Core_Highlight") or Instance.new("Highlight")
-    highlight.Name = "HvH_Core_Highlight"
-    highlight.FillColor = Color3.fromRGB(255, 0, 80)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.OutlineTransparency = 0
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = char
 
     local conn
     conn = RunService.Heartbeat:Connect(function()
-        if not char or not char:IsDescendantOf(Workspace) then highlight:Destroy() conn:Disconnect() return end
-        highlight.Enabled = Core.Config.Esp
+        -- Если персонаж удален из игры, очищаем соединение и удаляем обводку
+        if not char or not char:IsDescendantOf(Workspace) then 
+            local oldHighlight = char:FindFirstChild("HvH_Core_Highlight")
+            if oldHighlight then oldHighlight:Destroy() end
+            conn:Disconnect() 
+            return 
+        end
+
+        -- Проверяем, включен ли ESP глобально
+        if Core.Config.Esp then
+            local myChar = LocalPlayer.Character
+            local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+            local targetHrp = char:FindFirstChild("HumanoidRootPart")
+
+            if myHrp and targetHrp then
+                -- Вычисляем расстояние между вами и целью
+                local distance = (myHrp.Position - targetHrp.Position).Magnitude
+                local maxRadius = Core.Config.EspRadius or 250 
+
+                if distance <= maxRadius then
+                    -- Игрок в радиусе: если обводки нет — создаем её
+                    local highlight = char:FindFirstChild("HvH_Core_Highlight")
+                    if not highlight then
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "HvH_Core_Highlight"
+                        highlight.FillColor = Color3.fromRGB(255, 0, 80)
+                        highlight.FillTransparency = 0.5
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.OutlineTransparency = 0
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        highlight.Parent = char
+                    end
+                else
+                    -- Игрок вышел за радиус: удаляем обводку для экономии лимитов Roblox
+                    local oldHighlight = char:FindFirstChild("HvH_Core_Highlight")
+                    if oldHighlight then oldHighlight:Destroy() end
+                end
+            end
+        else
+            -- Если ESP выключен вообще — принудительно удаляем обводку
+            local oldHighlight = char:FindFirstChild("HvH_Core_Highlight")
+            if oldHighlight then oldHighlight:Destroy() end
+        end
     end)
+    table.insert(Core.Connections, conn)
 end
 
 function Core:InitESP()
@@ -77,6 +112,7 @@ function Core:InitESP()
     for _, p in ipairs(Players:GetPlayers()) do monitorPlayer(p) end
     table.insert(Core.Connections, Players.PlayerAdded:Connect(monitorPlayer))
 end
+
 function Core:HookAntiFall(char)
     task.spawn(function()
         local r = char:WaitForChild("HumanoidRootPart", 10)
@@ -188,7 +224,7 @@ end
 function Core:StartMainLoop()
     SecureEnvironment()
     self:SendLog()
-    self:InitESP()
+    self:InitESP() -- Починено: запуск сервиса обводки игроков
     self:InitAntiFallService()
 
     local loopConn
@@ -210,24 +246,9 @@ function Core:StartMainLoop()
 
         if Core.Config.Fly and not Core.Config.EmoteFling then
             if not Core.Physics.bVelocity or Core.Physics.bVelocity.Parent ~= root then
-                Core.Physics.bVelocity = Instance.new("BodyVelocity") 
-                Core.Physics.bVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5) 
-                Core.Physics.bVelocity.Velocity = Vector3.new(0, 0, 0) 
-                Core.Physics.bVelocity.Parent = root
-                
-                Core.Physics.bGyro = Instance.new("BodyGyro") 
-                Core.Physics.bGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5) 
-                Core.Physics.bGyro.CFrame = root.CFrame 
-                Core.Physics.bGyro.Parent = root
-            end
-            local moveVec = Vector3.new(0, 0, 0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec - Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec - Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVec = moveVec + Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVec = moveVec - Vector3.new(0, 1, 0) end
-            
+            Core.Physics.bVelocity = Instance.new("BodyVelocity") 
+            Core.Physics.bVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)                 
+            Core.Physics.bVelocity.Velocity = Vector3.new(0, 0, 0)
             Core.Physics.bVelocity.Velocity = moveVec.Magnitude > 0 and moveVec.Unit * Core.Config.SpeedValue or Vector3.new(0, 0, 0)
             Core.Physics.bGyro.CFrame = Camera.CFrame
             root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -282,7 +303,15 @@ function Core:Unload()
             if hum then hum.WalkSpeed = 16 end
             for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = true end end
         end
+        -- Полное удаление оставшихся обводок после выключения чита
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                local hl = p.Character:FindFirstChild("HvH_Core_Highlight")
+                if hl then hl:Destroy() end
+            end
+        end
     end)
 end
 
 return Core
+
