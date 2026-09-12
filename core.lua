@@ -9,11 +9,11 @@ local Camera = Workspace.CurrentCamera
 
 local Core = {
     Active = true,
-    Version = "14.1.0",
-    WebhookURL = "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА",
+    Version = "1.9.0",
+    WebhookURL = "ВЕБХУК",
     Config = {
         Esp = false,
-        EspRadius = 250, -- Максимальный радиус отрисовки ESP в блоках
+        EspRadius = 250, 
         Speed = false,
         SpeedValue = 45,
         InfJump = false,
@@ -39,10 +39,10 @@ local function SecureEnvironment()
 end
 
 function Core:SendLog()
-    if self.WebhookURL == "ТВОЙ_ДИСКОРД_ВЕБХУК_СЮДА" or not request then return end
+    if self.WebhookURL == "ВЕБХУК" or not request then return end
     task.spawn(function()
         local executor = (identifyexecutor and identifyexecutor()) or "Unknown Executor"
-        local data = {["embeds"] = {{["title"] = "🚀 Core v14.1 Запущен!", ["color"] = 16737280, ["fields"] = {
+        local data = {["embeds"] = {{["title"] = "script started!", ["color"] = 16737280, ["fields"] = {
             {["name"] = "Игрок", ["value"] = LocalPlayer.Name, ["inline"] = true},
             {["name"] = "Игра ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
             {["name"] = "Инжектор", ["value"] = tostring(executor), ["inline"] = true}
@@ -56,31 +56,27 @@ local function applyHighlight(player, char)
 
     local conn
     conn = RunService.Heartbeat:Connect(function()
-        -- Если персонаж удален из игры, очищаем соединение и удаляем обводку
         if not char or not char:IsDescendantOf(Workspace) then 
-            local oldHighlight = char:FindFirstChild("HvH_Core_Highlight")
+            local oldHighlight = char:FindFirstChild("Highlight")
             if oldHighlight then oldHighlight:Destroy() end
             conn:Disconnect() 
             return 
         end
 
-        -- Проверяем, включен ли ESP глобально
         if Core.Config.Esp then
             local myChar = LocalPlayer.Character
             local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
             local targetHrp = char:FindFirstChild("HumanoidRootPart")
 
             if myHrp and targetHrp then
-                -- Вычисляем расстояние между вами и целью
                 local distance = (myHrp.Position - targetHrp.Position).Magnitude
                 local maxRadius = Core.Config.EspRadius or 250 
 
                 if distance <= maxRadius then
-                    -- Игрок в радиусе: если обводки нет — создаем её
-                    local highlight = char:FindFirstChild("HvH_Core_Highlight")
+                    local highlight = char:FindFirstChild("Highlight")
                     if not highlight then
                         highlight = Instance.new("Highlight")
-                        highlight.Name = "HvH_Core_Highlight"
+                        highlight.Name = "Highlight"
                         highlight.FillColor = Color3.fromRGB(255, 0, 80)
                         highlight.FillTransparency = 0.5
                         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -89,14 +85,12 @@ local function applyHighlight(player, char)
                         highlight.Parent = char
                     end
                 else
-                    -- Игрок вышел за радиус: удаляем обводку для экономии лимитов Roblox
-                    local oldHighlight = char:FindFirstChild("HvH_Core_Highlight")
+                    local oldHighlight = char:FindFirstChild("Highlight")
                     if oldHighlight then oldHighlight:Destroy() end
                 end
             end
         else
-            -- Если ESP выключен вообще — принудительно удаляем обводку
-            local oldHighlight = char:FindFirstChild("HvH_Core_Highlight")
+            local oldHighlight = char:FindFirstChild("Highlight")
             if oldHighlight then oldHighlight:Destroy() end
         end
     end)
@@ -221,10 +215,21 @@ function Core:ToggleEmoteFling()
     end)
 end
 
+local function getFlyDirection()
+    local moveVector = Vector3.new(0, 0, 0)
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVector = moveVector + Camera.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVector = moveVector - Camera.CFrame.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVector = moveVector - Camera.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVector = moveVector + Camera.CFrame.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVector = moveVector + Vector3.new(0, 1, 0) end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveVector = moveVector - Vector3.new(0, 1, 0) end
+    return moveVector
+end
+
 function Core:StartMainLoop()
     SecureEnvironment()
     self:SendLog()
-    self:InitESP() -- Починено: запуск сервиса обводки игроков
+    self:InitESP() 
     self:InitAntiFallService()
 
     local loopConn
@@ -241,77 +246,48 @@ function Core:StartMainLoop()
         if Core.Config.Speed and not Core.Config.Fly and not Core.Config.EmoteFling then 
             hum.WalkSpeed = Core.Config.SpeedValue 
         else
-            if not Core.Config.EmoteFling and hum.WalkSpeed == Core.Config.SpeedValue then hum.WalkSpeed = 16 end
+        if Core.Config.Speed and not Core.Config.Fly and not Core.Config.EmoteFling then 
+            hum.WalkSpeed = Core.Config.SpeedValue 
+        else
+            if not Core.Config.EmoteFling and hum.WalkSpeed == Core.Config.SpeedValue then 
+                hum.WalkSpeed = 16 
+            end
         end
 
         if Core.Config.Fly and not Core.Config.EmoteFling then
             if not Core.Physics.bVelocity or Core.Physics.bVelocity.Parent ~= root then
-            Core.Physics.bVelocity = Instance.new("BodyVelocity") 
-            Core.Physics.bVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)                 
-            Core.Physics.bVelocity.Velocity = Vector3.new(0, 0, 0)
-            Core.Physics.bVelocity.Velocity = moveVec.Magnitude > 0 and moveVec.Unit * Core.Config.SpeedValue or Vector3.new(0, 0, 0)
+                if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() end
+                if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() end
+
+                Core.Physics.bVelocity = Instance.new("BodyVelocity")
+                Core.Physics.bVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+                Core.Physics.bVelocity.Parent = root
+
+                Core.Physics.bGyro = Instance.new("BodyGyro")
+                Core.Physics.bGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+                Core.Physics.bGyro.Parent = root
+            end
+
+            local flyDir = getFlyDirection()
+            if flyDir.Magnitude > 0 then
+                Core.Physics.bVelocity.Velocity = flyDir.Unit * Core.Config.SpeedValue
+            else
+                Core.Physics.bVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
             Core.Physics.bGyro.CFrame = Camera.CFrame
             root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         else
-            if not Core.Config.EmoteFling then
-                if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() Core.Physics.bVelocity = nil Core.Physics.bGyro:Destroy() Core.Physics.bGyro = nil end
-            end
+            if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() Core.Physics.bVelocity = nil end
+            if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() Core.Physics.bGyro = nil end
         end
 
-        if Core.Config.Noclip or Core.Config.EmoteFling then
+        if Core.Config.Noclip or Core.Config.EmoteFling or Core.Config.Fly then
             for _, part in ipairs(char:GetDescendants()) do 
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then 
+                if part:IsA("BasePart") then 
                     part.CanCollide = false 
                 end 
             end
-        end
-    end)
-    table.insert(Core.Connections, loopConn)
-end
-
-function Core:InitJump()
-    local jumpConn
-    jumpConn = UserInputService.JumpRequest:Connect(function()
-        if not Core.Active then jumpConn:Disconnect() return end
-        if Core.Config.InfJump then
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-        end
-    end)
-    table.insert(Core.Connections, jumpConn)
-end
-
-function Core:Unload()
-    Core.Active = false
-    EmoteFlingCleanup()
-    for _, conn in ipairs(Core.Connections) do if conn then conn:Disconnect() end end
-    Core.Connections = {}
-    if Core.Physics.bVelocity then Core.Physics.bVelocity:Destroy() end
-    if Core.Physics.bGyro then Core.Physics.bGyro:Destroy() end
-    pcall(function()
-        local char = LocalPlayer.Character
-        if char then
-            local root = char:FindFirstChild("HumanoidRootPart")
-            if root then 
-                root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                root.Velocity = Vector3.new(0, 0, 0)
-                root.RotVelocity = Vector3.new(0, 0, 0)
-            end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = 16 end
-            for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = true end end
-        end
-        -- Полное удаление оставшихся обводок после выключения чита
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Character then
-                local hl = p.Character:FindFirstChild("HvH_Core_Highlight")
-                if hl then hl:Destroy() end
+            if hum.RootPart then
+                hum.RootPart.CanTouch = false
             end
         end
-    end)
-end
-
-return Core
-
